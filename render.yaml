@@ -25,3 +25,4 @@ services:
         value: 50
       - key: DEFAULT_PAUSE_SECONDS
         value: 0.4
+

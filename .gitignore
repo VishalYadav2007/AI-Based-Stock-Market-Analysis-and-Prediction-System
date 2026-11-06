@@ -27,3 +27,7 @@ indian_stock_download_failures.csv
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# Local virtual environment
+.venv/
+venv/

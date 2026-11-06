@@ -15,7 +15,7 @@ TAVILY_API_KEY = os.getenv("TAVILY_API_KEY", "")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 
 # Gemini Model
-GEMINI_MODEL = "gemini-2.5-flash"
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
 
 # Database path (stored in local workspace or data folder)
 DB_NAME = os.getenv("DB_PATH", "indian_stock_market.sqlite")

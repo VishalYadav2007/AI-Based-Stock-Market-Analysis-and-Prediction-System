@@ -43,24 +43,38 @@ if css_path.exists():
 
 # Helper to format metric HTML cards
 def render_metric_cards(total: int, buys: int, holds: int, sells: int) -> str:
+    # Frontend-only: colour mapping via custom.css design system
+    # (Total: off-white, Buy: acid lime, Hold: muted grey, Sell: cobalt)
     return f"""
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin: 12px 0;">
-      <div class="stat-card">
+    <div class="kpi-grid">
+      <div class="stat-card stat-card--total">
         <div class="stat-value">{total}</div>
         <div class="stat-label">Total Stocks Scanned</div>
       </div>
-      <div class="stat-card" style="border-color: rgba(16, 185, 129, 0.4);">
-        <div class="stat-value" style="color: #10b981;">{buys}</div>
-        <div class="stat-label" style="color: #34d399;">Buy Watch Signals</div>
+      <div class="stat-card stat-card--buy">
+        <div class="stat-value">{buys}</div>
+        <div class="stat-label">Buy Watch Signals</div>
       </div>
-      <div class="stat-card" style="border-color: rgba(245, 158, 11, 0.4);">
-        <div class="stat-value" style="color: #f59e0b;">{holds}</div>
-        <div class="stat-label" style="color: #fbbf24;">Hold / Wait Signals</div>
+      <div class="stat-card stat-card--hold">
+        <div class="stat-value">{holds}</div>
+        <div class="stat-label">Hold / Wait Signals</div>
       </div>
-      <div class="stat-card" style="border-color: rgba(239, 68, 68, 0.4);">
-        <div class="stat-value" style="color: #ef4444;">{sells}</div>
-        <div class="stat-label" style="color: #f87171;">Sell Watch Signals</div>
+      <div class="stat-card stat-card--sell">
+        <div class="stat-value">{sells}</div>
+        <div class="stat-label">Sell Watch Signals</div>
       </div>
+    </div>
+    """
+
+
+def render_empty_state() -> str:
+    return """
+    <div class="empty-state">
+      <div class="es-icon">
+        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m6 15 4-5 3 3 5-6"/></svg>
+      </div>
+      <h3>No Scan Results Yet</h3>
+      <p>Run a quantitative scan to generate stock analysis and trading signals.</p>
     </div>
     """
 
@@ -351,17 +365,19 @@ def test_api_credentials(f_key: str, t_key: str, tav_key: str, g_key: str):
 
 def create_app():
     # Build Gradio UI
-    with gr.Blocks(title="Antigravity Indian Stock Advisor", analytics_enabled=False) as demo:
+    with gr.Blocks(title="Indian Stock Advisor & AI Research Terminal", analytics_enabled=False) as demo:
 
-        # Header Banne
         gr.HTML(
             """
             <div class="header-banner">
-              <h1 class="header-title">📈 Indian Stock Advisor & AI Research Terminal</h1>
-              <p class="header-subtitle">
-                Quantitative Momentum & Trend Screener (SMA50, SMA200, Wilder's RSI-14, 20D Return) 
-                coupled with Google Gemini 2.5 Flash and Tavily Real-Time Web Intelligence.
-              </p>
+              <div class="header-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m6 15 4-5 3 3 5-6"/></svg>
+              </div>
+              <div class="header-text">
+                <h1 class="header-title">Indian Stock Advisor &amp; AI Research Terminal</h1>
+                <p class="header-subtitle">Quantitative Momentum &amp; Trend Intelligence &nbsp;|&nbsp; AI-Powered Stock Research &nbsp;|&nbsp; Real-Time Market Intelligence</p>
+              </div>
+              <div class="header-badge">Quant Terminal <b>NSE</b></div>
             </div>
             """
         )
@@ -369,9 +385,9 @@ def create_app():
         with gr.Tabs() as tabs:
 
             # ---------------- TAB 1: SCREENER & SCANNER ----------------
-            with gr.Tab("📊 Stock Screener & Quantitative Scanner", id="tab_screener"):
+            with gr.Tab("Stock Screener & Quantitative Scanner", id="tab_screener"):
                 with gr.Row():
-                    with gr.Column(scale=3):
+                    with gr.Column(scale=3, elem_classes="control-panel universe-panel"):
                         source_choice = gr.Radio(
                             choices=[
                                 "Main Board Equities (EQUITY_L.csv)",
@@ -382,7 +398,8 @@ def create_app():
                             ],
                             value="Main Board Equities (EQUITY_L.csv)",
                             label="Security Universe Source",
-                            info="Select official eligible documents or provide your own stocks"
+                            info="Select an eligible securities universe or import your own stock symbols.",
+                            elem_id="universe-source"
                         )
                         custom_file = gr.File(
                             label="Upload Custom Security CSV or Excel File",
@@ -396,8 +413,8 @@ def create_app():
                             visible=False
                         )
 
-                    with gr.Column(scale=2):
-                        with gr.Accordion("⚙️ Ingestion & Scan Parameters", open=True):
+                    with gr.Column(scale=2, elem_classes="control-panel"):
+                        with gr.Accordion("Ingestion & Scan Parameters", open=True, elem_classes="params-panel"):
                             max_stocks = gr.Slider(
                                 minimum=5,
                                 maximum=500,
@@ -429,11 +446,11 @@ def create_app():
                     btn_scan = gr.Button("🚀 Run Download & Quantitative Scan", variant="primary", scale=2)
                     btn_rescan = gr.Button("🔄 Re-Scan Local Database", variant="secondary", scale=1)
 
-                status_banner = gr.Markdown("Ready to scan securities.")
+                status_banner = gr.Markdown('<span class="status-dot"></span>&nbsp;Ready to scan securities.', elem_classes="status-banner")
                 metrics_html = gr.HTML(render_metric_cards(0, 0, 0, 0))
 
                 # Table Controls
-                with gr.Row():
+                with gr.Row(elem_classes="filter-toolbar"):
                     filter_decision = gr.Radio(
                         choices=["ALL", "BUY WATCH", "HOLD / WAIT", "SELL WATCH"],
                         value="ALL",
@@ -445,6 +462,7 @@ def create_app():
                         scale=2
                     )
 
+                empty_state = gr.HTML(render_empty_state())
                 # Dataframe Display
                 scan_results_df = gr.DataFrame(
                     headers=["symbol", "date", "close", "RSI14", "SMA50", "SMA200", "Return20D_pct", "score", "decision", "reasons", "risks"],
@@ -457,8 +475,8 @@ def create_app():
                     download_scan_csv = gr.File(label="Export Scan Results CSV")
 
             # ---------------- TAB 2: INTERACTIVE CHARTS & TECHNICAL DEEP DIVE ----------------
-            with gr.Tab("📈 Interactive Charts & Technical Deep-Dive", id="tab_chart"):
-                with gr.Row():
+            with gr.Tab("Interactive Charts & Technical Deep-Dive", id="tab_chart"):
+                with gr.Row(elem_classes="filter-toolbar"):
                     selected_symbol_dropdown = gr.Dropdown(
                         choices=[],
                         value=None,
@@ -466,14 +484,14 @@ def create_app():
                         allow_custom_value=True,
                         info="Choose from scan results or type any NSE symbol (e.g. RELIANCE, TCS)"
                     )
-                    btn_load_chart = gr.Button("📊 Render Technical Chart", variant="primary")
+                    btn_load_chart = gr.Button("Render Technical Chart", variant="primary")
 
                 badge_box = gr.HTML("")
                 chart_plot = gr.Plot(label="Price Action, Volume & 14-Day Wilder RSI")
                 stock_summary_md = gr.Markdown("Select a stock to view technical indicators.")
 
             # ---------------- TAB 3: GEMINI AI ADVISOR ----------------
-            with gr.Tab("🧠 Gemini AI Stock Advisor & Research Analyst", id="tab_ai"):
+            with gr.Tab("Gemini AI Stock Advisor & Research Analyst", id="tab_ai"):
                 gr.Markdown(
                     """
                     ### Institutional AI Equity Research Synthesis
@@ -492,17 +510,17 @@ def create_app():
                         placeholder="e.g. What is the swing trade invalidation level? How do quarterly earnings affect this setup?",
                         scale=3
                     )
-                    btn_generate_ai = gr.Button("🤖 Generate Institutional Report", variant="primary", scale=1)
+                    btn_generate_ai = gr.Button("Generate Institutional Report", variant="primary", scale=1)
 
                 with gr.Row():
                     with gr.Column(scale=3):
                         ai_report_output = gr.Markdown("Click 'Generate Institutional Report' to produce analysis.")
                     with gr.Column(scale=2):
-                        with gr.Accordion("📰 Real-Time Web Intelligence Catalysts (Tavily)", open=True):
+                        with gr.Accordion("Real-Time Web Intelligence Catalysts (Tavily)", open=True):
                             ai_news_output = gr.Markdown("Live news catalysts will appear here.")
 
             # ---------------- TAB 4: ELIGIBLE SECURITIES BROWSER ----------------
-            with gr.Tab("📁 Eligible Securities Universe Browser", id="tab_eligible"):
+            with gr.Tab("Eligible Securities Universe Browser", id="tab_eligible"):
                 gr.Markdown(
                     """
                     ### Official NSE Eligible Security Documents
@@ -512,7 +530,7 @@ def create_app():
                     - **Eligible_T0_Securities**: Securities Eligible for T+0 Settlement Cycle
                     """
                 )
-                with gr.Row():
+                with gr.Row(elem_classes="filter-toolbar"):
                     doc_selector = gr.Radio(
                         choices=[
                             "Main Board Equities (EQUITY_L.csv)",
@@ -533,7 +551,7 @@ def create_app():
                 )
 
             # ---------------- TAB 5: DATABASE & DOWNLOADS ----------------
-            with gr.Tab("🗄️ Database & Export Center", id="tab_db"):
+            with gr.Tab("Database & Export Center", id="tab_db"):
                 gr.Markdown("### SQLite Database Coverage & Download Logs")
                 with gr.Row():
                     btn_refresh_db = gr.Button("🔄 Refresh Database Status", variant="secondary")
@@ -556,7 +574,7 @@ def create_app():
                     reset_status = gr.Markdown("")
 
             # ---------------- TAB 6: SETTINGS & API CONFIGURATION ----------------
-            with gr.Tab("⚙️ Settings & API Configuration", id="tab_settings"):
+            with gr.Tab("Settings & API Configuration", id="tab_settings"):
                 gr.Markdown(
                     """
                     ### API Keys & Engine Configuration
@@ -604,7 +622,7 @@ def create_app():
         # 2. Run scan
         def scan_and_cache(*args):
             scan_df, cards_html, status_msg, dropdown_update, csv_file = run_download_and_scan(*args)
-            return scan_df, scan_df, cards_html, status_msg, dropdown_update, csv_file
+            return scan_df, scan_df, cards_html, status_msg, dropdown_update, csv_file, gr.update(visible=scan_df.empty)
 
         btn_scan.click(
             fn=scan_and_cache,
@@ -623,14 +641,15 @@ def create_app():
                 metrics_html,
                 status_banner,
                 selected_symbol_dropdown,
-                download_scan_csv
+                download_scan_csv,
+                empty_state
             ]
         )
 
         # 3. Rescan local database
         def rescan_and_cache():
             scan_df, cards_html, status_msg, dropdown_update, csv_file = run_rescan_only()
-            return scan_df, scan_df, cards_html, status_msg, dropdown_update, csv_file
+            return scan_df, scan_df, cards_html, status_msg, dropdown_update, csv_file, gr.update(visible=scan_df.empty)
 
         btn_rescan.click(
             fn=rescan_and_cache,
@@ -641,20 +660,24 @@ def create_app():
                 metrics_html,
                 status_banner,
                 selected_symbol_dropdown,
-                download_scan_csv
+                download_scan_csv,
+                empty_state
             ]
         )
 
-        # 4. Filter scan table
+        # 4. Filter scan table (also toggles empty state)
+        def filter_and_update_empty(full_df, decision_filter, search_query):
+            filtered = filter_scan_table(full_df, decision_filter, search_query)
+            return filtered, gr.update(visible=filtered.empty)
         filter_decision.change(
-            fn=filter_scan_table,
+            fn=filter_and_update_empty,
             inputs=[state_scan_df, filter_decision, search_box],
-            outputs=[scan_results_df]
+            outputs=[scan_results_df, empty_state]
         )
         search_box.change(
-            fn=filter_scan_table,
+            fn=filter_and_update_empty,
             inputs=[state_scan_df, filter_decision, search_box],
-            outputs=[scan_results_df]
+            outputs=[scan_results_df, empty_state]
         )
 
         # 5. Clicking a row in the scan table populates the dropdown and AI input
@@ -745,7 +768,8 @@ if __name__ == "__main__":
     port_env = os.getenv("PORT")
     port = int(port_env) if port_env else None
     # Bind to 0.0.0.0 for external ingress routing
-    server_name = os.getenv("GRADIO_SERVER_NAME", "0.0.0.0")
+    server_name = os.getenv("GRADIO_SERVER_NAME", "127.0.0.1")
+    _theme = gr.themes.Base(primary_hue=gr.themes.colors.blue, neutral_hue=gr.themes.colors.slate)
     print(f"Starting Indian Stock Advisor on {server_name}:{port or 'dynamic'} ...", flush=True)
     demo.queue()
     try:
@@ -753,12 +777,14 @@ if __name__ == "__main__":
             server_name=server_name,
             server_port=port,
             css=custom_css,
-            show_error=True
+            show_error=True,
+            theme=_theme
         )
     except OSError:
         # Graceful fallback if specified local port is temporarily in TIME_WAIT
         demo.launch(
             server_name=server_name,
             css=custom_css,
-            show_error=True
+            show_error=True,
+            theme=_theme
         )
